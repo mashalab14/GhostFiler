@@ -1,5 +1,7 @@
+/**
+ * Contextual Trigger: Entry Point
+ */
 function buildContextCard(e) {
-  // Capture token immediately
   GmailApp.setCurrentMessageAccessToken(e.gmail.accessToken);
   const messageId = e.gmail.messageId;
 
@@ -39,17 +41,44 @@ function pushSettingsCard() {
     .build();
 }
 
+/**
+ * SETTINGS CARD
+ * FIX: Uses DecoratedText to label switches (The correct Google way)
+ */
 function createSettingsCard() {
   const props = PropertiesService.getUserProperties().getProperties();
   
   const card = CardService.newCardBuilder().setHeader(CardService.newCardHeader().setTitle("Settings"));
-  const section = CardService.newCardSection()
-    .addWidget(CardService.newTextInput().setFieldName("license_key").setTitle("License Key").setValue(props.license_key || ""))
-    .addWidget(CardService.newTextInput().setFieldName("api_key").setTitle("OpenAI API Key").setValue(props.api_key || ""))
-    .addWidget(CardService.newTextInput().setFieldName("root_folder_id").setTitle("Root Folder ID").setValue(props.root_folder_id || ""))
-    .addWidget(CardService.newSwitch().setFieldName("auto_pilot_enabled").setTitle("Background Auto-Pilot").setSelected(props.auto_pilot_enabled === 'true'))
-    .addWidget(CardService.newSwitch().setFieldName("auto_archive").setTitle("Auto-Archive").setSelected(props.auto_archive === 'true'));
+  const section = CardService.newCardSection();
 
+  // 1. Text Inputs
+  section.addWidget(CardService.newTextInput().setFieldName("license_key").setTitle("License Key").setValue(props.license_key || ""));
+  section.addWidget(CardService.newTextInput().setFieldName("api_key").setTitle("OpenAI API Key").setValue(props.api_key || ""));
+  section.addWidget(CardService.newTextInput().setFieldName("root_folder_id").setTitle("Root Folder ID").setValue(props.root_folder_id || ""));
+
+  // 2. Auto-Pilot Switch (Correctly Wrapped)
+  const pilotSwitch = CardService.newSwitch()
+    .setFieldName("auto_pilot_enabled")
+    .setValue("true")
+    .setSelected(props.auto_pilot_enabled === 'true');
+
+  section.addWidget(CardService.newDecoratedText()
+    .setText("Enable Background Auto-Pilot")
+    .setBottomLabel("Scans inbox every 10 mins")
+    .setSwitchControl(pilotSwitch));
+
+  // 3. Auto-Archive Switch (Correctly Wrapped)
+  const archiveSwitch = CardService.newSwitch()
+    .setFieldName("auto_archive")
+    .setValue("true")
+    .setSelected(props.auto_archive === 'true');
+
+  section.addWidget(CardService.newDecoratedText()
+    .setText("Auto-Archive Emails")
+    .setBottomLabel("Archive after successful filing")
+    .setSwitchControl(archiveSwitch));
+
+  // 4. Save Button
   const saveAction = CardService.newAction().setFunctionName("saveSettings");
   section.addWidget(CardService.newTextButton().setText("Save Configuration").setOnClickAction(saveAction));
   
@@ -60,7 +89,7 @@ function saveSettings(e) {
   const inputs = e.formInput;
   const props = PropertiesService.getUserProperties();
   
-  // Safe Individual Updates to preserve Quota data
+  // Safe Updates
   props.setProperty('license_key', inputs.license_key);
   props.setProperty('api_key', inputs.api_key);
   props.setProperty('root_folder_id', inputs.root_folder_id);
