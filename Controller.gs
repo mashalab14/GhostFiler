@@ -26,6 +26,7 @@ const Controller = {
 
 function processSingleMessage(id) {
   const message = GmailApp.getMessageById(id);
+  const thread = message.getThread(); // <--- CRITICAL FIX: Get the Thread
   const subject = message.getSubject();
   const props = PropertiesService.getUserProperties().getProperties();
 
@@ -44,7 +45,8 @@ function processSingleMessage(id) {
     // 4. ATTACHMENT FILTER (Skip - No Quota Cost)
     const atts = message.getAttachments().filter(att => Utils.isValidAttachment(att));
     if (!atts.length) {
-      message.addLabel(getLabel("GhostFiler_Done"));
+      // FIX: Label the THREAD, not the message
+      thread.addLabel(getLabel("GhostFiler_Done"));
       return { status: "SKIPPED", reason: "No valid attachments" };
     }
 
@@ -57,7 +59,8 @@ function processSingleMessage(id) {
       const reviewFolder = DriveService.getOrCreatePath(props.root_folder_id, "_Review_Needed");
       DriveService.saveAttachments(reviewFolder, atts, "REVIEW_REQ_");
       
-      message.addLabel(getLabel("GhostFiler_Review"));
+      // FIX: Label the THREAD
+      thread.addLabel(getLabel("GhostFiler_Review"));
       Logger.logAudit("REVIEW", subject, "Low Confidence");
       
       Controller.incrementQuota(); 
@@ -71,25 +74,24 @@ function processSingleMessage(id) {
     const month = metadata.date.substring(5, 7);
 
     // DYNAMIC PATH GENERATION
-    // Default to strict structure if user leaves it empty
     let pathTemplate = props.path_template || "/{year}/{vendor}/{type}/";
     
-    // Replace Tokens
     let finalPath = pathTemplate
       .replace(/{year}/gi, year)
       .replace(/{month}/gi, month)
       .replace(/{vendor}/gi, safeVendor)
       .replace(/{type}/gi, safeType);
 
-    // Clean up double slashes (e.g. if a token was empty)
     finalPath = finalPath.replace(/\/\//g, "/");
 
     const finalFolder = DriveService.getOrCreatePath(props.root_folder_id, finalPath);
     const prefix = `${metadata.date}_${safeVendor}_${safeType}_`;
 
     DriveService.saveAttachments(finalFolder, atts, prefix);
-    message.addLabel(getLabel("GhostFiler_Done"));
-    if (props.auto_archive === 'true') message.moveToArchive();
+    
+    // FIX: Label and Archive the THREAD
+    thread.addLabel(getLabel("GhostFiler_Done"));
+    if (props.auto_archive === 'true') thread.moveToArchive();
       
     Controller.incrementQuota(); 
     Logger.logAudit("SUCCESS", subject, `Filed to /${safeVendor}`);
@@ -102,7 +104,8 @@ function processSingleMessage(id) {
     const isConfigError = err.message.startsWith("CONFIG_ERROR");
     const labelName = isConfigError ? "GhostFiler_Config_Error" : "GhostFiler_Error";
     
-    message.addLabel(getLabel(labelName));
+    // FIX: Label the THREAD
+    thread.addLabel(getLabel(labelName));
     Logger.logAudit(isConfigError ? "CONFIG_ERROR" : "ERROR", subject, err.message);
     
     Controller.incrementQuota(); 
