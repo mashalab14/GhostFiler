@@ -43,52 +43,45 @@ function pushSettingsCard() {
 
 /**
  * SETTINGS CARD
- * FIX: Uses DecoratedText to label switches (The correct Google way)
+ * Clean sectioned layout for better UX
  */
 function createSettingsCard() {
   const props = PropertiesService.getUserProperties().getProperties();
   
   const card = CardService.newCardBuilder().setHeader(CardService.newCardHeader().setTitle("Settings"));
-  const section = CardService.newCardSection();
 
-  // 1. Text Inputs
-  section.addWidget(CardService.newTextInput().setFieldName("license_key").setTitle("License Key").setValue(props.license_key || ""));
-  section.addWidget(CardService.newTextInput().setFieldName("api_key").setTitle("OpenAI API Key").setValue(props.api_key || ""));
-  section.addWidget(CardService.newTextInput().setFieldName("root_folder_id").setTitle("Root Folder ID").setValue(props.root_folder_id || ""));
+  // 1. Credentials Section
+  const creds = CardService.newCardSection()
+    .setHeader("Credentials")
+    .addWidget(CardService.newTextInput().setFieldName("license_key").setTitle("License Key").setValue(props.license_key || ""))
+    .addWidget(CardService.newTextInput().setFieldName("api_key").setTitle("OpenAI API Key").setValue(props.api_key || ""))
+    .addWidget(CardService.newTextInput().setFieldName("root_folder_id").setTitle("Root Folder ID").setValue(props.root_folder_id || ""));
 
-  // NEW: Path Template Input
-  section.addWidget(CardService.newTextInput()
-    .setFieldName("path_template")
-    .setTitle("Folder Structure Template")
-    .setHint("Use: {year}, {vendor}, {type}")
-    .setValue(props.path_template || "/{year}/{vendor}/{type}/"));
+  // 2. Routing Logic Section (The "Hazel" Killer)
+  // Instead of JSON, we use a clear "Smart Routing" toggle and template
+  const routing = CardService.newCardSection()
+    .setHeader("Smart Routing")
+    .addWidget(CardService.newTextInput()
+      .setFieldName("path_template")
+      .setTitle("Default Folder Path")
+      .setHint("/{year}/{vendor}/{type}/")
+      .setValue(props.path_template || "/{year}/{vendor}/{type}/"));
 
-  // 2. Switches
-  const pilotSwitch = CardService.newSwitch()
-    .setFieldName("auto_pilot_enabled")
-    .setValue("true")
-    .setSelected(props.auto_pilot_enabled === 'true');
+  // 3. Automation Section
+  const auto = CardService.newCardSection()
+    .setHeader("Automation")
+    .addWidget(CardService.newDecoratedText()
+      .setText("Background Auto-Pilot")
+      .setSwitchControl(CardService.newSwitch().setFieldName("auto_pilot_enabled").setValue("true").setSelected(props.auto_pilot_enabled === 'true')))
+    .addWidget(CardService.newDecoratedText()
+      .setText("Auto-Archive Emails")
+      .setSwitchControl(CardService.newSwitch().setFieldName("auto_archive").setValue("true").setSelected(props.auto_archive === 'true')));
 
-  section.addWidget(CardService.newDecoratedText()
-    .setText("Enable Background Auto-Pilot")
-    .setBottomLabel("Scans inbox every 1 hour")
-    .setSwitchControl(pilotSwitch));
-
-  const archiveSwitch = CardService.newSwitch()
-    .setFieldName("auto_archive")
-    .setValue("true")
-    .setSelected(props.auto_archive === 'true');
-
-  section.addWidget(CardService.newDecoratedText()
-    .setText("Auto-Archive Emails")
-    .setBottomLabel("Archive after successful filing")
-    .setSwitchControl(archiveSwitch));
-
-  // 3. Save Button
+  // Save Button
   const saveAction = CardService.newAction().setFunctionName("saveSettings");
-  section.addWidget(CardService.newTextButton().setText("Save Configuration").setOnClickAction(saveAction));
+  const saveSection = CardService.newCardSection().addWidget(CardService.newTextButton().setText("Save Configuration").setOnClickAction(saveAction));
   
-  return card.addSection(section).build();
+  return card.addSection(creds).addSection(routing).addSection(auto).addSection(saveSection).build();
 }
 
 function saveSettings(e) {
