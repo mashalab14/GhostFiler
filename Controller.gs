@@ -68,8 +68,23 @@ function processSingleMessage(id) {
     const safeVendor = Utils.sanitizePath(metadata.vendor);
     const safeType = Utils.sanitizePath(metadata.type);
     const year = metadata.date.substring(0, 4);
+    const month = metadata.date.substring(5, 7);
+
+    // DYNAMIC PATH GENERATION
+    // Default to strict structure if user leaves it empty
+    let pathTemplate = props.path_template || "/{year}/{vendor}/{type}/";
     
-    const finalFolder = DriveService.getOrCreatePath(props.root_folder_id, `${year}/${safeVendor}/${safeType}`);
+    // Replace Tokens
+    let finalPath = pathTemplate
+      .replace(/{year}/gi, year)
+      .replace(/{month}/gi, month)
+      .replace(/{vendor}/gi, safeVendor)
+      .replace(/{type}/gi, safeType);
+
+    // Clean up double slashes (e.g. if a token was empty)
+    finalPath = finalPath.replace(/\/\//g, "/");
+
+    const finalFolder = DriveService.getOrCreatePath(props.root_folder_id, finalPath);
     const prefix = `${metadata.date}_${safeVendor}_${safeType}_`;
 
     DriveService.saveAttachments(finalFolder, atts, prefix);

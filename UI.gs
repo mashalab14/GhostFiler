@@ -56,7 +56,14 @@ function createSettingsCard() {
   section.addWidget(CardService.newTextInput().setFieldName("api_key").setTitle("OpenAI API Key").setValue(props.api_key || ""));
   section.addWidget(CardService.newTextInput().setFieldName("root_folder_id").setTitle("Root Folder ID").setValue(props.root_folder_id || ""));
 
-  // 2. Auto-Pilot Switch (Correctly Wrapped)
+  // NEW: Path Template Input
+  section.addWidget(CardService.newTextInput()
+    .setFieldName("path_template")
+    .setTitle("Folder Structure Template")
+    .setHint("Use: {year}, {vendor}, {type}")
+    .setValue(props.path_template || "/{year}/{vendor}/{type}/"));
+
+  // 2. Switches
   const pilotSwitch = CardService.newSwitch()
     .setFieldName("auto_pilot_enabled")
     .setValue("true")
@@ -64,10 +71,9 @@ function createSettingsCard() {
 
   section.addWidget(CardService.newDecoratedText()
     .setText("Enable Background Auto-Pilot")
-    .setBottomLabel("Scans inbox every 10 mins")
+    .setBottomLabel("Scans inbox every 1 hour")
     .setSwitchControl(pilotSwitch));
 
-  // 3. Auto-Archive Switch (Correctly Wrapped)
   const archiveSwitch = CardService.newSwitch()
     .setFieldName("auto_archive")
     .setValue("true")
@@ -78,7 +84,7 @@ function createSettingsCard() {
     .setBottomLabel("Archive after successful filing")
     .setSwitchControl(archiveSwitch));
 
-  // 4. Save Button
+  // 3. Save Button
   const saveAction = CardService.newAction().setFunctionName("saveSettings");
   section.addWidget(CardService.newTextButton().setText("Save Configuration").setOnClickAction(saveAction));
   
@@ -89,10 +95,13 @@ function saveSettings(e) {
   const inputs = e.formInput;
   const props = PropertiesService.getUserProperties();
   
-  // Safe Updates
   props.setProperty('license_key', inputs.license_key);
   props.setProperty('api_key', inputs.api_key);
   props.setProperty('root_folder_id', inputs.root_folder_id);
+  
+  // NEW: Save the template
+  props.setProperty('path_template', inputs.path_template);
+  
   props.setProperty('auto_pilot_enabled', inputs.auto_pilot_enabled ? 'true' : 'false');
   props.setProperty('auto_archive', inputs.auto_archive ? 'true' : 'false');
   
